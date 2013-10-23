@@ -28,7 +28,7 @@ import javax.swing.JTextField;
  * line beginning with "MESSAGE " then all characters following
  * this string should be displayed in its message area.
  */
-public class SellerClient {
+public class SellerClient implements Client{
 
     BufferedReader in;
     PrintWriter out;
@@ -89,6 +89,19 @@ public class SellerClient {
             "Screen name selection",
             JOptionPane.PLAIN_MESSAGE);
     }
+    
+    public int acknowledge(BufferedReader in, PrintWriter out) throws IOException{
+    	try{
+    		String line = in.readLine();
+    		out.println("seller");
+    		return 0;
+    	} 
+    	catch(Exception e){
+    		System.out.println(e.getMessage());
+    	}
+    	
+    	return 0;
+    }
 
     /**
      * Connects to the server then enters the processing loop.
@@ -101,6 +114,8 @@ public class SellerClient {
         in = new BufferedReader(new InputStreamReader(
             socket.getInputStream()));
         out = new PrintWriter(socket.getOutputStream(), true);
+        
+        acknowledge(in, out);
 
         // Process all messages from server, according to the protocol.
         while (true) {

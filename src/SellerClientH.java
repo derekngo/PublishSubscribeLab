@@ -3,6 +3,7 @@ import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 
@@ -32,6 +33,8 @@ public class SellerClientH {
 
     BufferedReader in;
     PrintWriter out;
+    //ObjectOutputStream outStream;
+    
     JFrame frame = new JFrame("Chatter");
     JTextField textField = new JTextField(40);
     JTextArea messageArea = new JTextArea(8, 40);
@@ -101,12 +104,19 @@ public class SellerClientH {
         in = new BufferedReader(new InputStreamReader(
             socket.getInputStream()));
         out = new PrintWriter(socket.getOutputStream(), true);
-
-        // Process all messages from server, according to the protocol.
+        
+        //testing
+    	//outStream = new ObjectOutputStream(socket.getOutputStream());
+        
+    	// Process all messages from server, according to the protocol.
         while (true) {
             String line = in.readLine();
             if (line.startsWith("SUBMITNAME")) {
                 out.println(getName());
+                
+                //testing
+                //outStream.writeObject(new String("a"));
+                
             } else if (line.startsWith("NAMEACCEPTED")) {
                 textField.setEditable(true);
             } else if (line.startsWith("MESSAGE")) {

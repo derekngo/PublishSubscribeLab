@@ -1,59 +1,48 @@
+// http://stackoverflow.com/questions/7022063/java-listening-to-a-socket-with-objectinputstream
+
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashSet;
 
-/**
- * A multithreaded chat room server.  When a client connects the
- * server requests a screen name by sending the client the
- * text "SUBMITNAME", and keeps requesting a name until
- * a unique one is received.  After a client submits a unique
- * name, the server acknowledges with "NAMEACCEPTED".  Then
- * all messages from that client will be broadcast to all other
- * clients that have submitted a unique screen name.  The
- * broadcast messages are prefixed with "MESSAGE ".
- *
- * Because this is just a teaching example to illustrate a simple
- * chat server, there are a few features that have been left out.
- * Two are very useful and belong in production code:
- *
- *     1. The protocol should be enhanced so that the client can
- *        send clean disconnect messages to the server.
- *
- *     2. The server should do some logging.
- */
 public class HeadBrokerServer {
 
-    /**
-     * The port that the server listens on.
-     */
-    private static final int PORT = 9001;
+	// the port that the server listens on
+	// reset in the arguments
+    private static int port = 9001;
 
-    /**
-     * The set of all names of clients in the chat room.  Maintained
-     * so that we can check that new clients are not registering name
-     * already in use.
-     */
+    // set of all names of clients in the chat room -used to verify unique names
     private static HashSet<String> names = new HashSet<String>();
 
-    /**
-     * The set of all the print writers for all the clients.  This
-     * set is kept so we can easily broadcast messages.
-     */
+    // used to broadcast messages to a group
     private static HashSet<PrintWriter> writers = new HashSet<PrintWriter>();
     
+    private static PrintWriter seller = null;
+    
     private static PrintWriter serverWriter = null;
+    
+    // new stuff
+    private static int sellerNumber = 1;
+    private static int buyerNumber = 1;
+    private static ArrayList<Item> itemList = new ArrayList<Item>();
 
-    /**
-     * The appplication main method, which just listens on a port and
-     * spawns handler threads.
-     */
+    // The application main method; listens on a port and spawns handler threads
     public static void main(String[] args) throws Exception {
-        System.out.println("The chat server is running.");
-        ServerSocket listener = new ServerSocket(PORT);
+    	// parse arguments
+    	if (args.length == 1){
+    		port = Integer.parseInt(args[0]);
+            System.out.println("The argument is " + port);
+    	}
+    	
+        System.out.println("The head server is running on port " + port);
+        ServerSocket listener = new ServerSocket(port);
+        
         try {
             while (true) {
                 new Handler(listener.accept()).start();
@@ -75,54 +64,72 @@ public class HeadBrokerServer {
         private PrintWriter out;
         private boolean server;
 
-        /**
-         * Constructs a handler thread, squirreling away the socket.
-         * All the interesting work is done in the run method.
-         */
+        private String clientType;
+        
+        private InputStream inStream;
+        private ObjectInputStream objectIn;
+
         public Handler(Socket socket) {
             this.socket = socket;
         }
 
-        /**
-         * Services this thread's client by repeatedly requesting a
-         * screen name until a unique one has been submitted, then
-         * acknowledges the name and registers the output stream for
-         * the client in a global set, then repeatedly gets inputs and
-         * broadcasts them.
-         */
         public void run() {
             try {
-
                 // Create character streams for the socket.
                 in = new BufferedReader(new InputStreamReader(
                     socket.getInputStream()));
                 out = new PrintWriter(socket.getOutputStream(), true);
                 
+                inStream = socket.getInputStream();
+	        	objectIn = new ObjectInputStream(inStream);
+                
                 server = false;
-
-                // Request a name from this client.  Keep requesting until
-                // a name is submitted that is not already used.  Note that
-                // checking for the existence of a name and adding the name
-                // must be done while locking the set of names.
-                while (true) {
-                	
-                    out.println("SUBMITNAME");
-                    name = in.readLine();
-                    if (name == null) {
-                        return;
-                    }
-                    if(name.equals("Server")) {
-                    	System.out.println("SERVER DETECTED");
-                    	server = true;
-                    	break;
-                    }
-                    synchronized (names) {
-                        if (!names.contains(name)) {
-                            names.add(name);
-                            break;
-                        }
-                    }
-                }
+                
+                // verifies what type the incoming socket is                
+                out.println("What kind of client are you?");
+            	String outputLine;
+            	
+            	clientType = in.readLine();
+            	
+            	if(clientType.equals("seller")){
+            		System.out.println("connected to SELLER" + sellerNumber);
+            		out.println(sellerNumber);
+            		sellerNumber++;
+            		
+            		while(true){
+            			String action = in.readLine();
+	            		if(action.equals("marketItem")){
+	            			Item item = (Item) objectIn.readObject();
+	            			itemList.add(item);
+	            			out.println("Item is now on the Market");
+	            		}else if(action.equals("sellItems")){
+	            			
+	            		}
+            		}
+            	}
+            	else if(clientType.equals("buyer")){
+            		System.out.println("connected to BUYER");
+            		// still needs to be implemented
+            		System.out.println("Please implement the buyer");
+            	}
+            	else if(clientType.equals("server")){
+            		System.out.println("connected to SERVER");
+            		
+            		while(true){
+            			String action = in.readLine();
+            			
+            			synchronized(this){
+	            			if(action.equals("buyerNumber")){
+	            				out.println(buyerNumber);
+	            				buyerNumber++;
+	            			}
+	            			else if(action.equals("sellerNumber")){
+	            				out.println(sellerNumber);
+	            				sellerNumber++;
+	            			}
+            			}
+            		}
+            	}
 
                 // Now that a successful name has been chosen, add the
                 // socket's print writer to the set of all writers so
@@ -132,7 +139,6 @@ public class HeadBrokerServer {
                 	serverWriter = out;
                 	System.out.println("connected to middle server");
                 	
-                	
                 	// FIX THIS LINE OF CODE HELLOOOOOOOO
                     server = false;
                 }
@@ -141,8 +147,6 @@ public class HeadBrokerServer {
                 	System.out.println("Connected to a client: " + name);
                 }
                 
-                
-
                 // Accept messages from this client and broadcast them.
                 // Ignore other clients that cannot be broadcasted to.
                 while (true) {
@@ -184,7 +188,13 @@ public class HeadBrokerServer {
                 }
             } catch (IOException e) {
                 System.out.println(e);
+            } /*catch (ClassNotFoundException e){
+            	System.out.println(e);
+            }*/ catch(Exception e){
+            	System.out.println(e.getMessage());
             } finally {
+            
+            
                 // This client is going down!  Remove its name and its print
                 // writer from the sets, and close its socket.
                 if (name != null) {
@@ -196,6 +206,7 @@ public class HeadBrokerServer {
                 try {
                     socket.close();
                 } catch (IOException e) {
+                	
                 }
             }
         }

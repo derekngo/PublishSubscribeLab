@@ -6,8 +6,8 @@ public class MiddleBrokerThread extends Thread
 	private Socket           socket   = null;
    	//private ChatClient       client   = null;
 	private DataInputStream  streamIn = null;
-	BufferedReader inServer = null;
-	PrintWriter outServer = null;
+	BufferedReader ssIn = null;
+	PrintWriter ssOut = null;
 	MiddleBrokerServer b = null;
    
 
@@ -15,10 +15,10 @@ public class MiddleBrokerThread extends Thread
    {  //client   = _client;
 	   b = a;
       socket   = _socket;
-      inServer = _inServer;
-      outServer = _outServer;
+      ssIn = _inServer;
+      ssOut = _outServer;
       //open();  
-      start();
+      //start();
    }
    /*public void open(){
 	   try{  
@@ -38,22 +38,22 @@ public class MiddleBrokerThread extends Thread
       }
    }*/
    public void run(){  
+	   
+	   try{
+		   String line = ssIn.readLine();
+		   //b.sendMessageToHead(line);
+        	
+		   ssOut.println("server");
+            
+		   System.out.println("Connected!!!");
+		   //String clientNumber = inServer.readLine();   
+	   }
+	   catch(IOException ioe){  
+		   System.out.println("Sending error: " + ioe.getMessage());
+	   }
+       
 	   while (true) {
-		   try{
-	        	String line = inServer.readLine();
-	        	System.out.println(line);
-	        	
-	            outServer.println("Server");
-	            
-	            for (PrintWriter writer : b.getWriters()) {
-                    writer.println("HEAD SERVER: MESSAGE " + line);
-                }
-	            //break;
-       		}
-       		catch(IOException ioe)
-       		{  
-       			System.out.println("Sending error: " + ioe.getMessage());
-       		}
-       	}
+		   
+	   }
    }
 }
