@@ -43,7 +43,7 @@ public class Seller implements Client {
         	OutputStream outStream =kkSocket.getOutputStream();
         	ObjectOutputStream objectOut = new ObjectOutputStream(outStream);
         ) {
-
+        	objectOut.flush();
         	BufferedReader sn = new BufferedReader(new InputStreamReader(System.in));
         	
         	sellerNumber = s.acknowledge(in, out);

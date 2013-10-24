@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -39,6 +41,9 @@ public class MiddleBrokerServer extends Thread{//implements Runnable{
     private DataOutputStream streamOut = null;
     BufferedReader ssIn = null;
     PrintWriter ssOut = null;
+
+    OutputStream outStream = null;
+	ObjectOutputStream objectOut = null;
     
 
     private static ArrayList<Item> itemList = new ArrayList<Item>();
@@ -78,6 +83,12 @@ public class MiddleBrokerServer extends Thread{//implements Runnable{
  	       	ssIn = new BufferedReader(new InputStreamReader(
  	       									socket.getInputStream()));
  	       	ssOut = new PrintWriter(socket.getOutputStream(), true);
+ 	       	
+ 	       	outStream = socket.getOutputStream();
+ 	       	
+ 	       	objectOut = new ObjectOutputStream(outStream);
+ 	       	
+ 	       	objectOut.flush();
  	       	
  	       	/*System.out.println("created streams");
  	       	String line = ssIn.readLine();

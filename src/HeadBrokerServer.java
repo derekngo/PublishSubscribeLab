@@ -72,16 +72,20 @@ public class HeadBrokerServer {
         public Handler(Socket socket) {
             this.socket = socket;
         }
-
+        
+        // http://stackoverflow.com/questions/9826267/cannot-get-objectinputstream-to-work
         public void run() {
             try {
                 // Create character streams for the socket.
                 in = new BufferedReader(new InputStreamReader(
                     socket.getInputStream()));
                 out = new PrintWriter(socket.getOutputStream(), true);
-                
+                System.out.println("Hi1");
                 inStream = socket.getInputStream();
+                System.out.println("Hi2");
 	        	objectIn = new ObjectInputStream(inStream);
+                BufferedReader tempReader = new BufferedReader(new InputStreamReader(inStream));
+	        	System.out.println("Hi3");
                 
                 server = false;
                 
