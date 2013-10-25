@@ -35,15 +35,15 @@ public class MiddleBrokerServer extends Thread{//implements Runnable{
      */
     private static HashSet<PrintWriter> writers = new HashSet<PrintWriter>();
     
-    private Socket socket              = null;
-    private Thread thread              = null;
-    private DataInputStream  console   = null;
-    private DataOutputStream streamOut = null;
+    private Socket socket = null;
     BufferedReader ssIn = null;
     PrintWriter ssOut = null;
 
-    OutputStream outStream = null;
-	ObjectOutputStream objectOut = null;
+    OutputStream ssOutStream = null;
+	ObjectOutputStream ssObjectOut = null;
+	
+	InputStream ssInStream = null;
+	ObjectInputStream ssObjectIn = null;
     
 
     private static ArrayList<Item> itemList = new ArrayList<Item>();
@@ -61,7 +61,8 @@ public class MiddleBrokerServer extends Thread{//implements Runnable{
         //mBroker.start();
         ServerSocket listener = new ServerSocket(PORT);
         
-        System.out.println("The Middle Broker server is running at port " + PORT);
+        System.out.println("The Middle Broker server is running at port " + serverPort);
+        System.out.println("The Middle Broker is accepting connections at port " + PORT);
         
         try {
         	System.out.println("accepting connections");
@@ -80,32 +81,20 @@ public class MiddleBrokerServer extends Thread{//implements Runnable{
     		System.out.println("Opened socket at port " + serverPort);
             
             // Make connection and initialize streams
- 	       	ssIn = new BufferedReader(new InputStreamReader(
- 	       									socket.getInputStream()));
  	       	ssOut = new PrintWriter(socket.getOutputStream(), true);
+ 	       	ssIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+ 	       	ssOut.flush();
+ 	       	ssOutStream = socket.getOutputStream();
+ 	       	ssObjectOut = new ObjectOutputStream(ssOutStream);
+ 	       	ssObjectOut.flush();
+ 	       	ssObjectIn = new ObjectInputStream(socket.getInputStream());
  	       	
- 	       	outStream = socket.getOutputStream();
- 	       	
- 	       	objectOut = new ObjectOutputStream(outStream);
- 	       	
- 	       	objectOut.flush();
- 	       	
- 	       	/*System.out.println("created streams");
- 	       	String line = ssIn.readLine();
- 	       	System.out.println("read in something from parent server");
- 	       	System.out.println(line);
-        	
- 	       	ssOut.println("server");
- 	       	
- 	       	System.out.println("Connected: " + socket);*/
- 	       	
- 	       	MiddleBrokerThread a = new MiddleBrokerThread(this, socket, ssIn, ssOut);
+ 	       	MiddleBrokerThread a = new MiddleBrokerThread(this, socket, ssIn, ssOut, ssObjectIn, ssObjectOut, PORT);
  	       	a.start();
     	}
     	finally{
     		
     	}
-    	
     }
     
     public BufferedReader getServerReader(){
@@ -114,6 +103,18 @@ public class MiddleBrokerServer extends Thread{//implements Runnable{
     
     public PrintWriter getServerWriter(){
     	return ssOut;
+    }
+    
+    public ObjectInputStream getServerObjectReader(){
+    	return ssObjectIn;
+    }
+    
+    public ObjectOutputStream getServerObjectWriter(){
+    	return ssObjectOut;
+    }
+    
+    public ArrayList<Item> getItemList(){
+    	return itemList;
     }
     
     public void run(){
@@ -126,7 +127,6 @@ public class MiddleBrokerServer extends Thread{//implements Runnable{
     }
     
     // ------------------------------ server stuff ----------------------------
-    
     
     /**
      * A handler thread class.  Handlers are spawned from the listening
@@ -145,8 +145,14 @@ public class MiddleBrokerServer extends Thread{//implements Runnable{
         private InputStream inStream;
         private ObjectInputStream objectIn;
         
+        private OutputStream outStream;
+        private ObjectOutputStream objectOut;
+        
         private BufferedReader ssIn;
         private PrintWriter ssOut;
+        
+    	private ObjectOutputStream ssObjectOut = null;    	
+    	private ObjectInputStream ssObjectIn = null; 
 
         /**
          * Constructs a handler thread, squirreling away the socket.
@@ -157,6 +163,8 @@ public class MiddleBrokerServer extends Thread{//implements Runnable{
             this.s = s;
             this.ssIn = s.getServerReader();
             this.ssOut = s.getServerWriter();
+            this.ssObjectIn = s.getServerObjectReader();
+            this.ssObjectOut = s.getServerObjectWriter();
         }
 
         /**
@@ -172,9 +180,15 @@ public class MiddleBrokerServer extends Thread{//implements Runnable{
                 in = new BufferedReader(new InputStreamReader(
                     socket.getInputStream()));
                 out = new PrintWriter(socket.getOutputStream(), true);
+                out.flush();
                 
                 inStream = socket.getInputStream();
 	        	objectIn = new ObjectInputStream(inStream);
+	        	
+	        	outStream = socket.getOutputStream();
+	        	objectOut = new ObjectOutputStream(outStream);
+	        	
+	        	System.out.println("In thread handler");
                 
                 // verifies what type the incoming socket is                
                 out.println("What kind of client are you?");
@@ -200,12 +214,56 @@ public class MiddleBrokerServer extends Thread{//implements Runnable{
             	}
             	else if(clientType.equals("buyer")){
             		System.out.println("connected to BUYER");
-            		// still needs to be implemented
-            		System.out.println("Please implement the buyer");
+            		
+            		// authenticates buyer
+            		ssOut.println("buyerNumber");
+            		String _buyerNumber = ssIn.readLine();
+            		System.out.println("connected to BUYER" + _buyerNumber);
+            		out.println(_buyerNumber);
+            		
+            		while(true){
+            			String action = in.readLine();
+            			if(action.equals("searchItem")){
+	            			Item item = (Item) objectIn.readObject();
+	            			System.out.println("ITEM FOUND");
+	            			// local server match
+	            			ArrayList<Item> matches = match(item);
+	            			
+	            			// query parent server
+	            			ssOut.println("getMatch");
+	            			ssObjectOut.writeObject(item);
+	            			// request will be read back from the "server"
+	            			System.out.println("Received matches from head server");
+	            			ArrayList<Item> matches_1 = (ArrayList<Item>) ssObjectIn.readObject();
+	            			System.out.println(matches_1.get(0).getName() + " " + matches_1.get(0).getAttributes());
+	            			boolean totalMatches = matches.addAll(matches_1);
+	            			System.out.println("adding the matches in the middle server");
+	            			
+	            			// return item back to buyer
+	            			objectOut.writeObject(matches);
+	            			
+	            			System.out.println("Sent to Buyer");
+	            		}else if(action.equals("bidItem")){
+	            			
+	            		}
+            		}
             	}
             	else if(clientType.equals("server")){
             		System.out.println("connected to SERVER");
             		
+            		while(true){
+            			String action = in.readLine();
+            			System.out.println("Read action: " + action);
+            			
+            			synchronized(this){
+	            			if(action.equals("getMatch")){
+	            				Item item = (Item) objectIn.readObject();
+		            			System.out.println("ITEM FOUND");
+		            			ArrayList<Item> matches = match(item);
+		            			objectOut.writeObject(matches);
+	            			}
+            			}
+            		}
             	}
             } catch (IOException e) {
                 System.out.println(e);
@@ -225,6 +283,19 @@ public class MiddleBrokerServer extends Thread{//implements Runnable{
                 } catch (IOException e) {
                 }
             }
+        }
+        
+        // dumb solution for now
+        public ArrayList<Item> match(Item item){
+        	ArrayList<Item> matches = new ArrayList<Item>();
+        	
+        	for(Item i: itemList){
+        		if(i.compareMatch(item)){
+        			matches.add(i);
+        		}
+        	}
+        	
+        	return matches;
         }
     }
 }

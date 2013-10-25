@@ -17,7 +17,13 @@ public class Item implements Serializable {
             counter++;
     }
     
-    
+    public Item(String name, String attributes, double minBid){
+    	this.seller = -1;
+    	this.name = name;
+    	this.attributes = attributes;
+    	this.minBid = minBid;
+    	this.uniqueID = -1;
+    }
 
     public int getUniqueID(){
             return uniqueID;
@@ -37,5 +43,9 @@ public class Item implements Serializable {
     
     public int getSeller(){
     	return seller;
+    }
+    
+    public boolean compareMatch(Item i){
+    	return this.name.equals(i.getName());
     }
 }

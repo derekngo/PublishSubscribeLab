@@ -13,7 +13,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashSet;
 
-public class HeadBrokerServer {
+public class BrokerServer {
 
 	// the port that the server listens on
 	// reset in the arguments
@@ -28,8 +28,6 @@ public class HeadBrokerServer {
     private static PrintWriter seller = null;
     
     private static PrintWriter serverWriter = null;
-    
-    private static int childPortNumber = -1;
     
     // new stuff
     private static int sellerNumber = 1;
@@ -123,51 +121,10 @@ public class HeadBrokerServer {
             		while(true){
             			String action = in.readLine();
 	            		if(action.equals("searchItem")){
-	            			// local checks
 	            			Item item = (Item) objectIn.readObject();
 	            			System.out.println("ITEM FOUND");
-	            			ArrayList<Item> matches = HeadBrokerServer.match(item);
-	            			
-	            			//matches.addAll(aaa);
-	            			for(int i = 0; i < matches.size(); i++){
-	            				System.out.println("Item " + matches.get(i).getUniqueID() + " ItemName: " + matches.get(i).getName());
-	            			}
-	            			
-	            			// test code
-	            			System.out.println("Creating new socket to child at port " + childPortNumber);
-	            			Socket childSocket = new Socket("localhost", childPortNumber);
-	            			System.out.println("Socket created");
-	            			PrintWriter out = new PrintWriter(childSocket.getOutputStream(), true);
-	            			out.flush();
-	            			System.out.println("Created Print Writer");
-	            			BufferedReader in = new BufferedReader(new InputStreamReader(childSocket.getInputStream()));
-	            			System.out.println("Created buffer reader");
-	        	        	ObjectOutputStream childObjectOut = new ObjectOutputStream(childSocket.getOutputStream());
-	        	        	ObjectInputStream childObjectIn = new ObjectInputStream(childSocket.getInputStream());
-	        	        	childObjectOut.flush();
-	        	        	System.out.println("Created object buffers");
-	            			System.out.println(in.readLine());
-	            			out.println("server");
-	            			System.out.println("querying");
-	            			out.println("getMatch");
-	            			childObjectOut.writeObject(item);
-	            			System.out.println("Wrote the Item");
-	            			ArrayList<Item> aaa;
-	            			synchronized(this){
-	            				aaa = (ArrayList<Item>)childObjectIn.readObject();
-	            			}	            			
-	            			System.out.println("GOT THE OBJECT");
-	            			
-	            			// write to the buyer
-	            			matches.addAll(aaa);
-	            			for(int i = 0; i < matches.size(); i++){
-	            				System.out.println("Item " + matches.get(i).getUniqueID() + " ItemName: " + matches.get(i).getName());
-	            			}
-	            			
-	            			//HeadBrokerServer.out.println("WHAT THE ");
-	            			//out.println("findMatch");
+	            			ArrayList<Item> matches = match(item);
 	            			objectOut.writeObject(matches);
-	            			
 	            		}else if(action.equals("bidItem")){
 	            			
 	            		}
@@ -175,11 +132,6 @@ public class HeadBrokerServer {
             	}
             	else if(clientType.equals("server")){
             		System.out.println("connected to SERVER");
-            		
-            		childPortNumber = Integer.parseInt(in.readLine());
-            		System.out.println("Port Number of child: " + childPortNumber);
-            		
-            		HeadBrokerServer.setChildStream(out, in, objectIn, objectOut);
             		
             		while(true){
             			String action = in.readLine();
@@ -193,30 +145,18 @@ public class HeadBrokerServer {
 	            				out.println(sellerNumber);
 	            				sellerNumber++;
 	            			}
-	            			else if(action.equals("getMatch")){
-	            				Item item = (Item) objectIn.readObject();
-		            			System.out.println("ITEM FOUND");
-		            			ArrayList<Item> matches = HeadBrokerServer.match(item);
-		            			
-		            			for(int i = 0; i < matches.size(); i++){
-		            				Item temp = matches.get(i);
-		            				System.out.println("[" + (i+1) + "] UniqueID: " + temp.getUniqueID() + " | Item Name: " + temp.getName() + " | Attributes: " + temp.getAttributes() + " | Current bid: " + temp.getMinBid());
-		            			}
-		            			
-		            			System.out.println("returning matches to middle server");
-		            			//objectOut.flush();
-		            			objectOut.writeObject(matches);
-		            			
-		            			System.out.println("Sent to Middle Server");
-	            			}
             			}
             		}
             	}
             } catch (IOException e) {
                 System.out.println(e);
-            } catch(Exception e){
+            } /*catch (ClassNotFoundException e){
+            	System.out.println(e);
+            }*/ catch(Exception e){
             	System.out.println(e.getMessage());
             } finally {
+            
+            
                 // This client is going down!  Remove its name and its print
                 // writer from the sets, and close its socket.
                 if (name != null) {
@@ -232,30 +172,18 @@ public class HeadBrokerServer {
                 }
             }
         }
-    }
         
-    private static PrintWriter out;
-    private static BufferedReader in;
-    private static ObjectInputStream ssObjectIn;
-    private static ObjectOutputStream ssObjectOut;
-    
-    public static void setChildStream(PrintWriter _out, BufferedReader _in, ObjectInputStream _ssObjectIn, ObjectOutputStream _ssObjectOut){
-    	out = _out;
-    	in = _in;
-    	ssObjectIn = _ssObjectIn;
-    	ssObjectOut = _ssObjectOut;
-    }
-    
-    // dumb solution for now
-    public static ArrayList<Item> match(Item item){
-    	ArrayList<Item> matches = new ArrayList<Item>();
-    	
-    	for(Item i: itemList){
-    		if(i.compareMatch(item)){
-    			matches.add(i);
-    		}
-    	}
-    	
-    	return matches;
+        // dumb solution for now
+        public ArrayList<Item> match(Item item){
+        	ArrayList<Item> matches = new ArrayList<Item>();
+        	
+        	for(Item i: itemList){
+        		if(i.compareMatch(item)){
+        			matches.add(i);
+        		}
+        	}
+        	
+        	return matches;
+        }
     }
 }
